@@ -9,15 +9,21 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import javax.swing.JOptionPane;
 import org.apache.commons.codec.binary.Base64;
+import config.DBConnection;
+import util.EncryptionUtil;
 
 
 
 public class AddPassword extends javax.swing.JFrame {
 
     
-    public AddPassword() {
-        initComponents();
-    }
+private MainFrame mainFrame;
+
+public AddPassword(MainFrame mainFrame) {
+    this.mainFrame = mainFrame;
+    initComponents();
+}
+
 
         @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -147,28 +153,28 @@ public class AddPassword extends javax.swing.JFrame {
         String urlofpass=jTextField2.getText();
         String password=jTextField3.getText();
         
-        String ecnryptedPassword=new String(Base64.encodeBase64(password.getBytes()));
-        
-        String url="jdbc:mysql://localhost:3306/password_manager";
-        String user="root";
-        String pass="root";
-        
-        try(Connection conn=DriverManager.getConnection(url,user,pass)){
-            String sql="INSERT INTO passwords (name,url,encrypted_password) VALUES (?, ?,?)";
-            PreparedStatement pstmt=conn.prepareStatement(sql);
-            pstmt.setString(1,name);
-            pstmt.setString(2,urlofpass);
-            pstmt.setString(3,ecnryptedPassword);
-            
-            int rowsInserted=pstmt.executeUpdate();
-            if(rowsInserted>0){
-                JOptionPane.showMessageDialog(this,"Data successfully inserted");
+        try {
+            String salt=EncryptionUtil.generateSalt();
+            String encryptedPassword = EncryptionUtil.encrypt(password,salt);
+            Connection conn = DBConnection.getConnection();
+
+            String sql = "INSERT INTO passwords (name, url, encrypted_password,salt) VALUES (?, ?, ?, ?)";
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, name);
+            pstmt.setString(2, urlofpass);
+            pstmt.setString(3, encryptedPassword);
+            pstmt.setString(4, salt);
+
+            int rowsInserted = pstmt.executeUpdate();
+            if (rowsInserted > 0) {
+                mainFrame.refreshPasswordTable();
+                JOptionPane.showMessageDialog(this, "Data successfully inserted");
                 this.dispose();
             }
-        }
-        catch(SQLException e){
+            
+        } catch (Exception e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error: "+e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
         }
     }//GEN-LAST:event_jButton1ActionPerformed
 
@@ -204,11 +210,12 @@ public class AddPassword extends javax.swing.JFrame {
         //</editor-fold>
 
         /* Create and display the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new AddPassword().setVisible(true);
-            }
-        });
+        java.awt.EventQueue.invokeLater(() -> {
+    MainFrame mainFrame = new MainFrame();
+    AddPassword addPassword = new AddPassword(mainFrame);
+    addPassword.setVisible(true);
+});
+
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

@@ -9,6 +9,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.*;
 import org.apache.commons.codec.binary.Base64;
+import config.DBConnection;
+import util.EncryptionUtil;
 /**
  *
  * @author vidya
@@ -18,18 +20,31 @@ public class EditPassword extends javax.swing.JFrame {
     /**
      * Creates new form EditPassword
      */
-    private String decryptPassword(String encryptedPassword) {
-    return new String(Base64.decodeBase64(encryptedPassword));
-    }
-    private String encryptPassword(String password) {
-    return new String(Base64.decodeBase64(password));
-    }
     public EditPassword(String name, String url, String encryptedPassword) {
     initComponents();
     jTextField1.setText(name);
     jTextField2.setText(url);
-    jTextField3.setText(decryptPassword(encryptedPassword)); // Decrypt and display
+
+    try (Connection con = DBConnection.getConnection()) {
+        String query = "SELECT salt FROM passwords WHERE name = ?";
+        PreparedStatement pst = con.prepareStatement(query);
+        pst.setString(1, name);
+        ResultSet rs = pst.executeQuery();
+
+        if (rs.next()) {
+            String salt = rs.getString("salt");
+            String decryptedPassword = EncryptionUtil.decrypt(encryptedPassword, salt);
+            jTextField3.setText(decryptedPassword);
+        } else {
+            JOptionPane.showMessageDialog(this, "Salt not found for this entry", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(this, "Database error while fetching salt", "Error", JOptionPane.ERROR_MESSAGE);
     }
+}
+
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -142,19 +157,24 @@ public class EditPassword extends javax.swing.JFrame {
     private void savePassword() {
     String name = jTextField1.getText().trim();
     String url = jTextField2.getText().trim();
-    String password = new String(jTextField3.getText()).trim();  // Use jPasswordField
-    
+    String password = jTextField3.getText().trim();
+
     if (name.isEmpty() || url.isEmpty() || password.isEmpty()) {
         JOptionPane.showMessageDialog(this, "All fields must be filled!", "Error", JOptionPane.ERROR_MESSAGE);
         return;
     }
 
-    try (Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/password_manager", "root", "root")) {
-        String query = "UPDATE passwords SET url=?, encrypted_password=? WHERE name=?";
+    try (Connection con = DBConnection.getConnection()) {
+        // Generate a new salt if needed
+        String salt = EncryptionUtil.generateSalt(); // Implement this if you don't already
+        String encryptedPassword = EncryptionUtil.encrypt(password, salt);
+
+        String query = "UPDATE passwords SET url=?, encrypted_password=?, salt=? WHERE name=?";
         PreparedStatement pst = con.prepareStatement(query);
         pst.setString(1, url);
-        pst.setString(2, encryptPassword(password));  // Encrypt password
-        pst.setString(3, name);
+        pst.setString(2, encryptedPassword);
+        pst.setString(3, salt);
+        pst.setString(4, name);
 
         int updated = pst.executeUpdate();
         if (updated > 0) {
@@ -168,6 +188,7 @@ public class EditPassword extends javax.swing.JFrame {
         JOptionPane.showMessageDialog(this, "Database error!", "Error", JOptionPane.ERROR_MESSAGE);
     }
 }
+
 
     private void jTextField3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField3ActionPerformed
         // TODO add your handling code here:

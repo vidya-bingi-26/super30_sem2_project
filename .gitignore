@@ -1,0 +1,23 @@
+
+# Build output
+/build/
+/dist/
+/nbbuild/
+/nbdist/
+/nbproject/private/
+/out/
+/*.class
+
+# IDE-specific
+*.iml
+*.ipr
+*.iws
+.idea/
+.vscode/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Config file
+config.properties

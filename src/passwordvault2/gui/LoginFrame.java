@@ -5,6 +5,9 @@
 
 package passwordvault2.gui;
 import javax.swing.JOptionPane;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.util.Properties;
 /**
  *
  * @author vidya
@@ -15,6 +18,25 @@ public class LoginFrame extends javax.swing.JFrame {
     /**
      * Creates new form LoginFrame
      */
+    private static String MASTER_USERNAME;
+    private static String MASTER_PASSWORD;
+
+    static {
+        try (InputStream input = new FileInputStream("config.properties")) {
+            Properties prop = new Properties();
+            prop.load(input);
+            MASTER_USERNAME = prop.getProperty("master_username");
+            MASTER_PASSWORD = prop.getProperty("master_password");
+
+            if (MASTER_USERNAME == null || MASTER_PASSWORD == null) {
+                throw new RuntimeException("Missing master_username or master_password in config.properties");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Failed to load credentials from config.properties");
+        }
+    }
+    
     public LoginFrame() {
         initComponents();
     }

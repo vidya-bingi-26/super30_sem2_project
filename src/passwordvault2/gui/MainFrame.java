@@ -15,6 +15,7 @@ import java.sql.*;
 import org.apache.commons.codec.binary.Base64;
 import javax.swing.table.TableRowSorter;
 import javax.swing.RowFilter;
+import config.DBConnection;
 /**
  *
  * @author vidya
@@ -130,13 +131,13 @@ public class MainFrame extends javax.swing.JFrame {
 //    
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
         // TODO add your handling code here:
-        AddPassword addPasswordForm = new AddPassword();
+        AddPassword addPasswordForm = new AddPassword(this);
         addPasswordForm.setVisible(true);
 
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void loadPasswords() {
-    try (Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/password_manager", "root", "root")) {
+    try (Connection con = DBConnection.getConnection()) {
         Statement stmt = con.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT id, name, url, encrypted_password FROM passwords");
         tableModel.setRowCount(0); 
@@ -156,6 +157,9 @@ public class MainFrame extends javax.swing.JFrame {
     } catch (SQLException e) {
         e.printStackTrace();
     }
+}
+public void refreshPasswordTable() {
+    loadPasswords();
 }
 
    private class EditButtonRenderer extends JButton implements TableCellRenderer {
